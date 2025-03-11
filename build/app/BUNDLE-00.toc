@@ -1,0 +1,1 @@
+([('app', '/Users/yusuke_omura/dev/util/pytube/dist/app', 'EXECUTABLE')],)

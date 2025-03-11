@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YouTube Downloader</title>
+</head>
+<body>
+    <h2>YouTube動画ダウンロード</h2>
+    <input type="text" id="url" placeholder="動画URLを入力">
+    <button onclick="downloadVideo()">ダウンロード</button>
+    <p id="status">ステータス: 待機中</p>
+    <p id="progress"></p>
+    <button id="downloadBtn" style="display: none;" onclick="downloadFile()">ファイルをダウンロード</button>
+
+    <script>
+        let clientId = null;
+        let filename = null;
+        let eventSource = null;
+
+        async function downloadVideo() {
+            const url = document.getElementById("url").value;
+            if (!url) {
+                alert("URLを入力してください");
+                return;
+            }
+
+            document.getElementById("status").innerText = "ステータス: ダウンロード開始...";
+            document.getElementById("progress").innerText = "";
+            document.getElementById("downloadBtn").style.display = "none";
+
+            const response = await fetch("/download", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ url: url })
+            });
+            const data = await response.json();
+            if (data.error) {
+                alert("エラー: " + data.error);
+                return;
+            }
+
+            clientId = data.client_id;
+            eventSource = new EventSource(`/progress/${clientId}`);
+            eventSource.onmessage = function(event) {
+                document.getElementById("progress").innerText = event.data;
+                if (event.data.includes("Download Complete!")) {
+                    eventSource.close();
+                    fetchFilename();
+                }
+            };
+        }
+
+        async function fetchFilename() {
+            for (let i = 0; i < 10; i++) {
+                const response = await fetch(`/get_filename/${clientId}`);
+                const data = await response.json();
+                if (data.filename) {
+                    filename = data.filename;
+                    document.getElementById("status").innerText = "ステータス: ダウンロード完了！";
+                    document.getElementById("downloadBtn").style.display = "block";
+                    return;
+                }
+                await new Promise(resolve => setTimeout(resolve, 2000));
+            }
+            document.getElementById("status").innerText = "ステータス: ファイル取得に失敗しました";
+        }
+
+        function downloadFile() {
+            if (!filename) {
+                alert("ファイルが見つかりません");
+                return;
+            }
+            const a = document.createElement("a");
+            a.href = `/file/${filename}`;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+        }
+    </script>
+</body>
+</html>
