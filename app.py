@@ -14,7 +14,7 @@ completed_files = {}
 
 def download_youtube_video(url, client_id):
     try:
-        yt = YouTube(url)
+        yt = YouTube(url, use_po_token=True)
         video_stream = yt.streams.filter(adaptive=True, file_extension="mp4", only_video=True).order_by("resolution").desc().first()
         audio_stream = yt.streams.filter(adaptive=True, file_extension="mp4", only_audio=True).order_by("abr").desc().first()
 
